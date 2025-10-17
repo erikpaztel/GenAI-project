@@ -1,12 +1,24 @@
-FROM python:3
+FROM python:3.11 AS builder
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
 
-COPY . .
+RUN python -m venv /opt/venv
+
+RUN /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+
+COPY frontend/ ./frontend/
+COPY backend/ ./backend/
 
 EXPOSE 8501
 
-CMD [ "python", "./main.py" ]
+ENV PATH="/opt/venv/bin:$PATH"
+
+CMD ["streamlit", "run", "./frontend/app.py"]
