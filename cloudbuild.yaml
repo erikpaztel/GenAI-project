@@ -1,31 +1,34 @@
 steps:
-  # Step 1: Build the Docker container image
-  # This step uses the standard Docker builder from Google to build the image
-  # using the Dockerfile in the current directory.
-  # The image is tagged with a unique name in Google's Artifact Registry.
-  # $_SERVICE_NAME and $COMMIT_SHA are variables provided by Cloud Build.
+  # Paso 1: Construir la imagen del contenedor Docker
+  # Este paso utiliza el constructor estándar de Docker de Google para construir la imagen
+  # usando el Dockerfile en el directorio actual.
+  # La imagen se etiqueta con un nombre único en el Artifact Registry de Google.
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA', '.']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-app:$COMMIT_SHA', '.']
 
-  # Step 2: Push the container image to Artifact Registry
-  # Artifact Registry is Google's secure private storage for Docker images.
+  # Paso 2: Subir la imagen del contenedor al Artifact Registry
+  # Artifact Registry es el almacenamiento privado y seguro de Google para imágenes de Docker.
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA']
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-app:$COMMIT_SHA']
 
-  # Step 3: Deploy the new container image to Cloud Run
-  # This step uses the gcloud CLI to deploy the newly pushed image to the Cloud Run service.
+  # Paso 3: Desplegar la nueva imagen del contenedor en Cloud Run
+  # Este paso utiliza la CLI de gcloud para desplegar la imagen recién subida al servicio de Cloud Run.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
-      - '${_SERVICE_NAME}' # The name of your Cloud Run service
-      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA'
+      - 'rag-app' # El nombre de tu servicio de Cloud Run.
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-app:$COMMIT_SHA'
       - '--region=us-central1'
       - '--platform=managed'
-      - '--allow-unauthenticated' # Makes the service publicly accessible
-      - '--set-secrets=GOOGLE_API_KEY=your-secret-name:latest' # Connect the secret from Secret Manager
+      - '--allow-unauthenticated' # Hace el servicio accesible públicamente.
+      # Pasa la configuración no sensible como variables de entorno (separadas por comas).
+      - '--set-env-vars=MODEL_ID=gemini-1.5-pro-latest,VERTEX_AI_ENABLED=True,PROJECT_ID=${PROJECT_ID},LOCATION_ID=us-central1'
+      # Conecta múltiples secretos desde Secret Manager (separados por comas).
+      # El formato es NOMBRE_VAR_ENTORNO=NOMBRE_SECRETO:VERSION
+      - '--set-secrets=BUCKET_URI=rag-app-bucket-uri:latest,SEARCH_ENDPOINT=rag-app-search-endpoint:latest'
 
-# This tells Cloud Build to store the built images in Artifact Registry for future reference.
+# Esto le indica a Cloud Build que almacene las imágenes construidas en Artifact Registry.
 images:
-  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/rag-app:$COMMIT_SHA'
