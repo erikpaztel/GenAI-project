@@ -1,0 +1,31 @@
+steps:
+  # Step 1: Build the Docker container image
+  # This step uses the standard Docker builder from Google to build the image
+  # using the Dockerfile in the current directory.
+  # The image is tagged with a unique name in Google's Artifact Registry.
+  # $_SERVICE_NAME and $COMMIT_SHA are variables provided by Cloud Build.
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA', '.']
+
+  # Step 2: Push the container image to Artifact Registry
+  # Artifact Registry is Google's secure private storage for Docker images.
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA']
+
+  # Step 3: Deploy the new container image to Cloud Run
+  # This step uses the gcloud CLI to deploy the newly pushed image to the Cloud Run service.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}' # The name of your Cloud Run service
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated' # Makes the service publicly accessible
+      - '--set-secrets=GOOGLE_API_KEY=your-secret-name:latest' # Connect the secret from Secret Manager
+
+# This tells Cloud Build to store the built images in Artifact Registry for future reference.
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/${_SERVICE_NAME}:$COMMIT_SHA'
