@@ -1,0 +1,59 @@
+# General Python/OS Exclusions
+#############################
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Setup.py, poetry, and distribution files
+dist/
+build/
+*.egg-info/
+.eggs/
+wheels/
+*.whl
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Editor and OS junk files
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+*~
+.idea/ # PyCharm and other JetBrains IDEs
+.vscode/ # VS Code settings
+*.sublime-project
+*.sublime-workspace
+
+# Temporary files, logs, and coverage reports
+*.log
+*.tmp
+.coverage
+htmlcov/
+
+# Python Testing Framework
+.pytest_cache/
+
+# Jupyter Notebook/VS Code interactive outputs
+.ipynb_checkpoints/
+
+# 🔒 LLM API Keys & Secrets
+############################
+
+# Environment variable files (crucial for API keys and secrets)
+.env
+.flaskenv
+secrets.yaml
+config.ini
+
+# Local data, cache, and large files
+#####################################
+/data/
+/cache/
+*.pkl
+*.sqlite
