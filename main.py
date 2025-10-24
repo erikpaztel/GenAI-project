@@ -1,9 +1,8 @@
-from flask import Flask
-app = Flask(__name__)
+from frontend import *
+from backend import *
 
-@app.route('/')
-def hello():
-    return "Hello from Flask!"
+def main():
+    display(ingest, query_and_augment)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8501) # Listen on 0.0.0.0:8501
+if __name__ == "__main__":
+    main()

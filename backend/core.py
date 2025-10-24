@@ -3,6 +3,7 @@ from google import genai
 import chromadb
 import os
 from chromadb.utils import embedding_functions
+from typing import Dict, Any, List
 
 project_id = os.getenv('GOOGLE_PROJECT')
 location_id = os.getenv('GOOGLE_LOCATION')
@@ -12,21 +13,24 @@ chroma_client = chromadb.PersistentClient(path="./chroma_data")
 embedding_model = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
 llm = genai.Client(vertexai=True, project=project_id, location=location_id)
 
-def query_and_augment(user_question: str, n_results: int = 3) -> str:
+def query_and_augment(user_question: str, n_results: int = 3) -> Dict[str, Any]:
     """
     Queries the ChromaDB collection and uses the results to generate
-    an answer with an LLM.
+    an answer with an LLM. Returns a dictionary with the answer and sources.
     """
     
     try:
         collection = chroma_client.get_collection(name="my_documents")
     except chromadb.errors.CollectionNotFoundError:
-        print("Error: 'my_documents' collection not found.")
-        print("Please run your ingest() function first.")
-        return "Error: Collection not found."
+        return {
+            "answer": "Error: 'my_documents' collection not found. Please run your ingest() function first.",
+            "sources": []
+        }
     except Exception as e:
-        print(f"Error connecting to ChromaDB: {e}")
-        return f"Error: {e}"
+        return {
+            "answer": f"Error connecting to ChromaDB: {e}",
+            "sources": []
+        }
     
     query_embedding_response = embedding_model.get_embeddings([user_question])
     query_vector = query_embedding_response[0].values
@@ -41,26 +45,36 @@ def query_and_augment(user_question: str, n_results: int = 3) -> str:
     retrieved_metadatas = results.get('metadatas', [[]])[0]
     
     if not retrieved_docs:
-        return "I couldn't find any relevant information in the documents to answer your question."
+        return {
+            "answer": "I couldn't find any relevant information in the documents to answer your question.",
+            "sources": []
+        }
 
     context_chunks = []
+    sources_for_ui = [] # List to hold clean source info for the final return
     
     for doc, meta in zip(retrieved_docs, retrieved_metadatas):
         chunk_lines = []
         
+        # --- Extract metadata for both Context and UI ---
         source = meta.get('source', 'N/A')
+        page = meta.get('page', 'N/A')
+        
+        # Format for the LLM context
         chunk_lines.append(f"Source: {source}")
-        
-        if 'page' in meta and meta['page'] != 'N/A':
-            chunk_lines.append(f"Page: {meta['page']}")
-        
+        if page != 'N/A':
+            chunk_lines.append(f"Page: {page}")
         if 'chunk_index' in meta:
              chunk_lines.append(f"Chunk Index: {meta['chunk_index']}")
-
         chunk_lines.append("---")
         chunk_lines.append(doc)
-        
         context_chunks.append("\n".join(chunk_lines))
+
+        # Format for the UI return
+        ui_source = f"{os.path.basename(source)}" # Use basename for cleaner display if it's a file path
+        if page != 'N/A':
+            ui_source += f" (Page {page})"
+        sources_for_ui.append(ui_source)
     
     context_string = "\n\n====================\n\n".join(context_chunks)
     
@@ -79,7 +93,13 @@ def query_and_augment(user_question: str, n_results: int = 3) -> str:
     
     try:
         response = llm.models.generate_content(contents=augmented_prompt, model='gemini-2.5-flash')
-        return response.text
+        return {
+            "answer": response.text,
+            "sources": sources_for_ui
+        }
     except Exception as e:
         print(f"Error generating content with LLM: {e}")
-        return f"Error: {e}"
+        return {
+            "answer": f"Error generating content with LLM: {e}",
+            "sources": []
+        }
