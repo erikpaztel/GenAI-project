@@ -14,11 +14,14 @@ WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 
-COPY frontend/ ./frontend/
-COPY backend/ ./backend/
+COPY frontend/ ./frontend
+COPY backend/ ./backend
+COPY main.py ./main.py
 
 EXPOSE 8501
 
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+
 ENV PATH="/opt/venv/bin:$PATH"
 
-CMD ["streamlit", "run", "./main.py"]
+ENTRYPOINT ["streamlit", "run", "main.py", "--server.port=8501", "--server.address=0.0.0.0"]

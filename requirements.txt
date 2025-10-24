@@ -1,8 +1,6 @@
 streamlit==1.50.0
 google-cloud-aiplatform==1.121.0
 google-genai==1.45.0
-google-cloud-storage==3.4.1
-flask==3.1.2
 langchain==0.3.27
 langchain-community==0.3.31
 chromadb==1.1.1
